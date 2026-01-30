@@ -19,7 +19,7 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}🔄 Bootstrapping UniZ Microservices Environment...${NC}"
+echo -e "${BLUE}Bootstrapping UniZ Microservices Environment...${NC}"
 
 # Ensure we are in the right directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -27,15 +27,15 @@ cd "$SCRIPT_DIR/.."
 
 for repo in "${REPOS[@]}"; do
   if [ ! -d "../$repo" ]; then
-    echo -e "📥 ${BLUE}Cloning $repo...${NC}"
+    echo -e "Cloning $repo..."
     git clone "https://github.com/uniz-rguktong/$repo.git" "../$repo"
     if [ $? -ne 0 ]; then
-      echo -e "❌ ${RED}Failed to clone $repo. Please check your permissions.${NC}"
+      echo -e "Failed to clone $repo. Please check your permissions."
     fi
   else
-    echo -e "✅ ${GREEN}$repo${NC} is already present."
+    echo -e "${GREEN}$repo${NC} is already present."
   fi
 done
 
-echo -e "\n${GREEN}🎉 Bootstrap Complete!${NC}"
+echo -e "\n${GREEN}Bootstrap Complete!${NC}"
 echo -e "You can now run ${BLUE}./start.sh${NC} to launch the system."
