@@ -1,15 +1,15 @@
-# 📔 UniZ Backend API Documentation
+# UniZ Backend API Documentation
 
 Welcome to the comprehensive API reference for the UniZ Microservices Backend. All requests should be prefixed with the Gateway URL.
 
-> **Gateway URL:** `https://uniz-production-gateway.vercel.app/api/v1`
+**Gateway URL:** `https://uniz-production-gateway.vercel.app/api/v1`
 
 ---
 
-## 🔐 Authentication Service (`/auth`)
+## Authentication Service (/auth)
 Handles identity, sessions, and multi-factor authentication.
 
-### **Login**
+### Login
 `POST /auth/login`
 Authenticates a user and returns a JSON Web Token (JWT).
 - **Body:**
@@ -21,7 +21,19 @@ Authenticates a user and returns a JSON Web Token (JWT).
   ```
 - **Returns:** `{ "success": true, "token": "...", "user": { ... } }`
 
-### **Request OTP**
+### Signup / Add Student
+`POST /auth/signup`
+Creates a new student credential. Restricted to Admin or Student self-signup.
+- **Body:**
+  ```json
+  {
+    "username": "21BCE001",
+    "password": "hashed_password",
+    "role": "student"
+  }
+  ```
+
+### Request OTP
 `POST /auth/otp/request`
 Generates and sends a 6-digit OTP to the user's registered contact.
 - **Body:**
@@ -31,9 +43,9 @@ Generates and sends a 6-digit OTP to the user's registered contact.
   }
   ```
 
-### **Verify OTP**
+### Verify OTP
 `POST /auth/otp/verify`
-Verifies the 6-digit code for password resets or highly sensitive actions.
+Verifies the 6-digit code for password resets.
 - **Body:**
   ```json
   {
@@ -42,7 +54,7 @@ Verifies the 6-digit code for password resets or highly sensitive actions.
   }
   ```
 
-### **Reset Password**
+### Reset Password
 `POST /auth/password/reset`
 Updates the user's password if the OTP is valid.
 - **Body:**
@@ -54,135 +66,46 @@ Updates the user's password if the OTP is valid.
   }
   ```
 
+### Logout
+`POST /auth/logout`
+Invalidates the current session.
+- **Headers:** `Authorization: Bearer <token>`
+
 ---
 
-## 👤 User Service (`/profile`)
+## User Service (/profile)
 Provides profile management and user lookup capabilities.
 
-### **Get My Profile**
+### Get My Student Profile
 `GET /profile/student/me`
 Fetches the detailed profile of the currently logged-in student.
 - **Headers:** `Authorization: Bearer <token>`
-- **Returns:** 
+- **Returns:**
   ```json
   {
     "success": true,
     "student": {
       "username": "...",
+      "name": "...",
       "branch": "...",
-      "is_in_campus": true,
-      "phone_number": "..."
+      "is_in_campus": true
     }
   }
   ```
 
-### **Update Profile**
+### Update Student Profile
 `PUT /profile/student/update`
-Allows students to update their personal information.
+Allows students to update their personal information (phone, address, etc).
 - **Headers:** `Authorization: Bearer <token>`
-- **Body (JSON):**
-  - `phone` (optional string)
-  - `address` (optional string)
-  - `name` (optional string)
-
-### **Search Students (Admin)**
-`POST /profile/student/search`
-Filter and paginate through student records.
-- **Headers:** `Authorization: Bearer <token>`
-- **Body (JSON):**
-  - `username`: Partial match for username or name
-  - `branch`: "CSE", "ECE", etc.
-  - `year`: 1, 2, 3, 4
-  - `gender`: "M", "F"
-  - `page`: Default 1
-  - `limit`: Default 10
-
----
-
-## 🎫 Outpass Service (`/requests`)
-Manages the workflow for student outpasses and local outings.
-
-### **Create Outpass (Long Stay)**
-`POST /requests/outpass`
-Submit a request for leave (usually multi-day).
-- **Headers:** `Authorization: Bearer <token>`
-- **Body (JSON):**
+- **Body:**
   ```json
   {
-    "reason": "Family Function",
-    "fromDay": "2024-02-01T10:00:00Z",
-    "toDay": "2024-02-05T18:00:00Z"
+    "phone": "9876543210",
+    "address": "..."
   }
   ```
 
-### **Create Outing (Local)**
-`POST /requests/outing`
-Submit a request for local day-outing.
-- **Headers:** `Authorization: Bearer <token>`
-- **Body (JSON):**
-  ```json
-  {
-    "reason": "Shopping",
-    "fromTime": "2024-02-01T14:00:00Z",
-    "toTime": "2024-02-01T20:00:00Z"
-  }
-  ```
-
-### **View My History**
-`GET /requests/history`
-Lists all personal requests with status (pending, approved, rejected).
-- **Headers:** `Authorization: Bearer <token>`
-- **Query Params:**
-  - `page`: Page index (int)
-  - `limit`: Items per page (int)
-
-### **Approve/Reject (Faculty/Admin)**
-`POST /requests/:id/approve` | `POST /requests/:id/reject`
-Finalize or escalate a student request.
-- **Path Param:** `id` (The UUID of the request)
-- **Body (JSON):**
-  ```json
-  {
-    "comment": "Approved based on parental confirmation."
-  }
-  ```
-
-### **List All Requests (Admin)**
-`GET /requests/outpass/all` | `GET /requests/outing/all`
-Get a master list of all requests in the system.
-- **Headers:** `Authorization: Bearer <token>`
-- **Returns:** `{ "success": true, "outpasses": [...] }`
-
----
-
-## ⏰ Cron Service (`/cron`)
-System maintenance and background automation.
-
-### **Trigger Maintenance**
-`GET /cron/api/cron`
-Manually trigger the daily maintenance job (Expire old outpasses, clear tokens).
-- **Requires:** Vercel Cron Secret (Internal)
-
----
-
-## 📧 Notification Service (`/notifications`)
-Asynchronous notification delivery.
-
-### **Health Check**
-`GET /notifications/health`
-Check if the Redis worker and mail transporter are active.
-
----
-
-## 👑 Admin & Faculty APIs
-These endpoints are restricted to administrative roles (Dean, Director, Warden, Caretaker, Faculty).
-
-### **Admin Dashboard Profile**
-`GET /profile/admin/me` | `GET /profile/faculty/me`
-Retrieves specialized profile data for administrative staff.
-- **Headers:** `Authorization: Bearer <token>`
-
-### **Search Students**
+### Search Students (Admin)
 `POST /profile/student/search`
 Filter and browse the student directory.
 - **Headers:** `Authorization: Bearer <token>`
@@ -198,40 +121,187 @@ Filter and browse the student directory.
   }
   ```
 
-### **Manage Requests (Approval Flow)**
-`POST /requests/:id/approve` | `POST /requests/:id/reject`
+### Get My Faculty Profile
+`GET /profile/faculty/me`
+Retrieves specialized profile data for administrative staff.
+- **Headers:** `Authorization: Bearer <token>`
+
+### Create Faculty Profile (Admin)
+`POST /profile/faculty/create`
+Adds a new faculty profile into the system.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "username": "F101",
+    "name": "Prof. Smith",
+    "email": "smith@uniz.edu",
+    "department": "CSE",
+    "designation": "Assistant Professor"
+  }
+  ```
+
+### Get My Admin Profile
+`GET /profile/admin/me`
+Retrieves dashboard-specific data for webmasters/deans.
+- **Headers:** `Authorization: Bearer <token>`
+
+---
+
+## Outpass Service (/requests)
+Manages the workflow for student outpasses and local outings.
+
+### Create Outpass (Long Stay)
+`POST /requests/outpass`
+Submit a request for residential leave (multi-day).
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "reason": "...",
+    "fromDay": "ISO_DATE",
+    "toDay": "ISO_DATE"
+  }
+  ```
+
+### Create Outing (Local)
+`POST /requests/outing`
+Submit a request for local day-outing.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "reason": "...",
+    "fromTime": "ISO_TIME",
+    "toTime": "ISO_TIME"
+  }
+  ```
+
+### View My History
+`GET /requests/history` | `GET /requests/history/:id`
+Lists personal requests with status (pending, approved, rejected, expired).
+- **Headers:** `Authorization: Bearer <token>`
+
+### Approve Request (Admin/Faculty)
+`POST /requests/:id/approve`
 Finalize student outing/outpass requests.
 - **Path Param:** `id` (The UUID of the request)
 - **Body:**
   ```json
   {
-    "comment": "Verified with parents."
+    "comment": "Optional comment"
   }
   ```
 
-### **Master Request Lists**
-`GET /requests/outpass/all` | `GET /requests/outing/all`
-View every request in the system (Warden/Security view).
+### Reject Request (Admin/Faculty)
+`POST /requests/:id/reject`
+Reject student outing/outpass requests.
+- **Path Param:** `id` (The UUID of the request)
+- **Body:**
+  ```json
+  {
+    "comment": "Reason for rejection"
+  }
+  ```
+
+### List All Outing Requests (Admin)
+`GET /requests/outing/all`
+Master list of all local outing requests.
 - **Headers:** `Authorization: Bearer <token>`
 
-### **System Maintenance**
-`GET /cron/api/cron`
-Manually trigger system-wide maintenance.
-- **Access:** Restricted/Authenticated
+### List All Outpass Requests (Admin)
+`GET /requests/outpass/all`
+Master list of all long-stay outpass requests.
+- **Headers:** `Authorization: Bearer <token>`
 
 ---
 
-## 🛠 Status Codes & Errors
+## Academics Service (/academics)
+Manages subjects, grades, and attendance data.
+
+### Get My Grades
+`GET /academics/grades`
+Fetches all grade records for the currently authenticated student.
+- **Headers:** `Authorization: Bearer <token>`
+
+### Add/Update Grades (Admin/Faculty)
+`POST /academics/grades/add`
+Bulk add or update subject grades for a student.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "studentId": "21BCE001",
+    "semesterId": "SEM_1",
+    "grades": [
+      { "subjectId": "SUB_UUID_1", "grade": 9.5 },
+      { "subjectId": "SUB_UUID_2", "grade": 8.0 }
+    ]
+  }
+  ```
+
+### Get My Attendance
+`GET /academics/attendance`
+Retrieves subject-wise attendance percentages for the student.
+- **Headers:** `Authorization: Bearer <token>`
+
+### Add/Update Attendance (Admin/Faculty)
+`POST /academics/attendance/add`
+Update attendance records for a student/subject.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "subjectId": "SUB_UUID_1",
+    "records": [
+      { 
+        "studentId": "21BCE001", 
+        "semesterId": "SEM_1", 
+        "attended": 28, 
+        "total": 30 
+      }
+    ]
+  }
+  ```
+
+### Get Subjects List
+`GET /academics/subjects`
+Fetch all subjects registered in the curriculum.
+- **Headers:** `Authorization: Bearer <token>`
+
+---
+
+## Notification Service (/notifications)
+Asynchronous notification delivery via email and worker queues.
+
+### Health Check
+`GET /notifications/health`
+Check if the Redis worker and mail transporter are active.
+
+---
+
+## Cron Service (/cron)
+System maintenance and background automation.
+
+### Execute Maintenance Job
+`GET /cron/api/cron`
+Manually trigger the daily maintenance job (Expire old outpasses).
+- **Requires:** Vercel Cron Secret
+
+---
+
+## Error Response Codes
 
 | Code | Meaning |
 | :--- | :--- |
-| `200` | Success |
-| `400` | Validation Error (Check `errors` array) |
-| `401` | Unauthorized (Invalid Token) |
-| `403` | Forbidden (Insufficient Permissions) |
-| `404` | Resource Not Found |
-| `429` | Too Many Requests (Rate Limited) |
-| `500` | Internal Server Error |
+| 200 | Success |
+| 201 | Created |
+| 400 | Validation Error (Invalid request body) |
+| 401 | Unauthorized (Missing or invalid token) |
+| 403 | Forbidden (Insufficient role permissions) |
+| 404 | Resource Not Found |
+| 409 | Conflict (Duplicate resource or state conflict) |
+| 500 | Internal Server Error |
 
 ---
-*Last Updated: January 2026*
+*Last Updated: January 30, 2026*
