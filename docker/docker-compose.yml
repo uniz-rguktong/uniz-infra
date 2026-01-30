@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: uniz_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  uniz-gateway:
+    build:
+      context: ../uniz-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SERVICE_URL=http://uniz-auth-service:3001
+      - USER_SERVICE_URL=http://uniz-user-service:3002
+      - OUTPASS_SERVICE_URL=http://uniz-outpass-service:3003
+    depends_on:
+      - redis
+
+  uniz-auth-service:
+    build:
+      context: ../uniz-auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=auth
+      - JWT_SECURITY_KEY=dev_secret
+    depends_on:
+      - postgres
+
+  uniz-user-service:
+    build:
+      context: ../uniz-user-service
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=users
+      - JWT_SECURITY_KEY=dev_secret
+    depends_on:
+      - postgres
+
+  uniz-outpass-service:
+    build:
+      context: ../uniz-outpass-service
+    ports:
+      - "3003:3003"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=outpass
+      - JWT_SECURITY_KEY=dev_secret
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  uniz-notification-service:
+    build:
+      context: ../uniz-notification-service
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  uniz-cron-service:
+    build:
+      context: ../uniz-cron-service
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=public
+    depends_on:
+      - postgres
+
+volumes:
+  redis_data:
+  pg_data:
