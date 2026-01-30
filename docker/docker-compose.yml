@@ -7,6 +7,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    restart: always
 
   postgres:
     image: postgres:15-alpine
@@ -18,10 +19,12 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    restart: always
 
   uniz-gateway:
     build:
-      context: ../uniz-gateway
+      context: ../..
+      dockerfile: uniz-gateway/Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -29,55 +32,67 @@ services:
       - AUTH_SERVICE_URL=http://uniz-auth-service:3001
       - USER_SERVICE_URL=http://uniz-user-service:3002
       - OUTPASS_SERVICE_URL=http://uniz-outpass-service:3003
+      - PORT=3000
     depends_on:
       - redis
 
   uniz-auth-service:
     build:
-      context: ../uniz-auth-service
+      context: ../..
+      dockerfile: uniz-auth-service/Dockerfile
     ports:
       - "3001:3001"
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=auth
       - JWT_SECURITY_KEY=dev_secret
+      - PORT=3001
     depends_on:
       - postgres
 
   uniz-user-service:
     build:
-      context: ../uniz-user-service
+      context: ../..
+      dockerfile: uniz-user-service/Dockerfile
     ports:
       - "3002:3002"
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=users
       - JWT_SECURITY_KEY=dev_secret
+      - PORT=3002
     depends_on:
       - postgres
 
   uniz-outpass-service:
     build:
-      context: ../uniz-outpass-service
+      context: ../..
+      dockerfile: uniz-outpass-service/Dockerfile
     ports:
       - "3003:3003"
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=outpass
       - JWT_SECURITY_KEY=dev_secret
       - REDIS_URL=redis://redis:6379
+      - PORT=3003
     depends_on:
       - postgres
       - redis
 
   uniz-notification-service:
     build:
-      context: ../uniz-notification-service
+      context: ../..
+      dockerfile: uniz-notification-service/Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379
+      - SMTP_HOST=smtp.ethereal.email
+      - SMTP_USER=test
+      - SMTP_PASS=test
     depends_on:
       - redis
 
   uniz-cron-service:
     build:
-      context: ../uniz-cron-service
+      context: ../..
+      dockerfile: uniz-cron-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@postgres:5432/uniz_db?schema=public
     depends_on:

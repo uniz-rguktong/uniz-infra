@@ -1,55 +1,67 @@
 #!/bin/bash
-# UniZ Master Start Script
+# UniZ Microservices Master Start Script (Cross-Platform Ready)
 
-# Colors for better output
+# Get current script path
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+
+# Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
 echo -e "${BLUE}🚀 Starting UniZ Microservices Stack...${NC}"
 
-# 1. Spin up Infrastructure
-cd uniz-infra/docker
+# Check for Docker
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    echo -e "❌ ${RED}Docker Compose not found. Please install Docker.${NC}"
+    exit 1
+fi
+
+# 1. Start Infrastructure
+cd "$SCRIPT_DIR/docker"
 docker-compose up -d
 
-echo -e "⏳ ${BLUE}Waiting for Database connectivity...${NC}"
-sleep 10
+echo -e "⏳ ${BLUE}Waiting for Database to warm up...${NC}"
+sleep 5
 
-# 2. Database Sync per service
-echo -e "📦 ${BLUE}Synchronizing Microservice Schemas (Prisma)...${NC}"
-cd ../..
+# 2. Database Schema Sync
+echo -e "📦 ${BLUE}Synchronizing Database Schemas...${NC}"
 
-echo " - Auth Service..."
-export DATABASE_URL="postgresql://user:password@localhost:5432/uniz_db?schema=auth"
-(cd uniz-auth-service && npx prisma db push --accept-data-loss --skip-generate > /dev/null)
+sync_db() {
+  local service_name=$1
+  local schema_name=$2
+  echo -e "  - ${BLUE}$service_name${NC} ($schema_name)"
+  
+  if [ -d "$ROOT_DIR/$service_name" ]; then
+    export DATABASE_URL="postgresql://user:password@localhost:5432/uniz_db?schema=$schema_name"
+    (cd "$ROOT_DIR/$service_name" && npx prisma db push --accept-data-loss --skip-generate > /dev/null 2>&1)
+  else
+    echo -e "  ⚠️ ${RED}Directory $service_name missing. Run bootstrap.sh first.${NC}"
+  fi
+}
 
-echo " - User Service..."
-export DATABASE_URL="postgresql://user:password@localhost:5432/uniz_db?schema=users"
-(cd uniz-user-service && npx prisma db push --accept-data-loss --skip-generate > /dev/null)
+sync_db "uniz-auth-service" "auth"
+sync_db "uniz-user-service" "users"
+sync_db "uniz-outpass-service" "outpass"
+sync_db "uniz-cron-service" "public"
 
-echo " - Outpass Service..."
-export DATABASE_URL="postgresql://user:password@localhost:5432/uniz_db?schema=outpass"
-(cd uniz-outpass-service && npx prisma db push --accept-data-loss --skip-generate > /dev/null)
-
-echo " - Cron Service..."
-export DATABASE_URL="postgresql://user:password@localhost:5432/uniz_db?schema=public"
-(cd uniz-cron-service && npx prisma db push --accept-data-loss --skip-generate > /dev/null)
-
-# 3. Frontend Start
+# 3. Launch Frontend
 echo -e "🌐 ${BLUE}Launching Frontend Dashboard...${NC}"
-cd uniz-client
-# Run in background and suppress noise
-npm run dev -- --port 5173 --host > /dev/null 2>&1 &
+if [ -d "$ROOT_DIR/uniz-client" ]; then
+  (cd "$ROOT_DIR/uniz-client" && npm install > /dev/null && npm run dev -- --port 5173 --host > /dev/null 2>&1 &)
+else
+  echo -e "  ⚠️ ${RED}uniz-client directory missing.${NC}"
+fi
 
 echo -e "\n${GREEN}✅ UniZ System is Online!${NC}"
 echo -e "------------------------------------------------"
-echo -e "🖥  ${GREEN}Frontend URL:${NC} http://localhost:5173"
-echo -e "🛠  ${GREEN}API Gateway: ${NC} http://localhost:3000/api/v1"
+echo -e "🖥  ${GREEN}Frontend:${NC} http://localhost:5173"
+echo -e "🛠  ${GREEN}API Gateway:${NC} http://localhost:3000/api/v1"
 echo -e "📊 ${GREEN}Health Check:${NC} http://localhost:3000/health"
 echo -e "------------------------------------------------"
-echo -e "💡 TIP: View live logs with: ${BLUE}docker-compose -f uniz-infra/docker/docker-compose.yml logs -f${NC}\n"
+echo -e "💡 View logs with: ${BLUE}docker-compose -f $SCRIPT_DIR/docker/docker-compose.yml logs -f${NC}\n"
 
-# Leave script running to keep tunnel/process info? No, user wants clean.
-# I will tail the logs of the gateway for a few seconds to show "Neat logs" then stop.
-echo -e "${BLUE}Tail of Gateway Logs:${NC}"
-docker-compose -f uniz-infra/docker/docker-compose.yml logs --tail=10 uniz-gateway
+# Verify Gateway
+curl -s http://localhost:3000/health | grep -q "ok" && echo -e "${GREEN}API Gateway is responding.${NC}" || echo -e "${RED}Gateway start pending.${NC}"
