@@ -174,6 +174,53 @@ Check if the Redis worker and mail transporter are active.
 
 ---
 
+## 👑 Admin & Faculty APIs
+These endpoints are restricted to administrative roles (Dean, Director, Warden, Caretaker, Faculty).
+
+### **Admin Dashboard Profile**
+`GET /profile/admin/me` | `GET /profile/faculty/me`
+Retrieves specialized profile data for administrative staff.
+- **Headers:** `Authorization: Bearer <token>`
+
+### **Search Students**
+`POST /profile/student/search`
+Filter and browse the student directory.
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:**
+  ```json
+  {
+    "username": "21BCE",
+    "branch": "CSE",
+    "year": 3,
+    "gender": "M",
+    "page": 1,
+    "limit": 20
+  }
+  ```
+
+### **Manage Requests (Approval Flow)**
+`POST /requests/:id/approve` | `POST /requests/:id/reject`
+Finalize student outing/outpass requests.
+- **Path Param:** `id` (The UUID of the request)
+- **Body:**
+  ```json
+  {
+    "comment": "Verified with parents."
+  }
+  ```
+
+### **Master Request Lists**
+`GET /requests/outpass/all` | `GET /requests/outing/all`
+View every request in the system (Warden/Security view).
+- **Headers:** `Authorization: Bearer <token>`
+
+### **System Maintenance**
+`GET /cron/api/cron`
+Manually trigger system-wide maintenance.
+- **Access:** Restricted/Authenticated
+
+---
+
 ## 🛠 Status Codes & Errors
 
 | Code | Meaning |
