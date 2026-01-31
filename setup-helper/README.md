@@ -4,12 +4,17 @@ This is your master checklist and runbook for deploying UniZ to a GoDaddy VPS. T
 
 ## 📋 Phase 1: Purchase & Prerequisites
 
-### 1. Buy the VPS
-Go to GoDaddy -> Servers -> VPS Hosting.
-*   **Operating System:** Ubuntu 22.04 or 24.04 (LTS)
-*   **Plan Recommendation:** **4 vCPU / 8 GB RAM** (NVMe SSD)
-    *   *Why?* You need RAM for the many Node.js processes and database connections.
-*   **Datacenter:** Choose the one closest to your students (e.g., Asia/India).
+### 1. Choice of Server
+*   **GoDaddy VPS**: Follow the standard plan.
+*   **Azure for Students**: 
+    1. Sign up at [azure.microsoft.com/free/students/](https://azure.microsoft.com/free/students/).
+    2. Create a Virtual Machine: **Ubuntu 24.04**.
+    3. Size: **Standard_B2s** (2 vCPU, 4GB RAM) - Matches your 'Economy' requirement.
+    4. **Networking (CRITICAL)**: In the Azure "Network Security Group" (NSG), add Inbound rules for:
+        - Port 80 (HTTP)
+        - Port 443 (HTTPS)
+        - Port 22 (SSH)
+    5. **Region**: Select **Central India (Pune)** for lowest latency.
 
 ### 2. Configure DNS
 *   Go to your Domain DNS Management.
